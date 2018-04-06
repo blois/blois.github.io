@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+</head>
+<body>
+
+Example of a Monaco editor which only uses browser-based scrolling.
+
+<div id="container" style="width:100%;height:600px;border:1px solid grey"></div>
+
+<script src="node_modules/monaco-editor/min/vs/loader.js"></script>
+<script>
+    (async () => {
+      require.config({ paths: { 'vs': 'node_modules/monaco-editor/min/vs' }});
+
+      await new Promise(resolve => require(['vs/editor/editor.main'], resolve));
+
+      const text = await (await fetch('./sample_gulpfile.txt')).text();
+      const container = document.querySelector('#container');
+
+      const editor = monaco.editor.create(container, {
+            value: text,
+            language: 'python',
+            scrollBeyondLastLine: false,
+            minimap: {
+              enabled: false,
+            },
+            autoIndent: true,
+            formatOnType: true,
+            overviewRulerBorder: false,
+        });
+      const model = editor.getModel();
+
+      window.editor = editor;
+
+      let lineCount = model.getLineCount();
+
+      function getHeight(lineCount) {
+        const MIN_LINES = 1;
+
+        const configuration = editor.getConfiguration();
+        const lineHeight = configuration.lineHeight;
+        const contentHeight = lineHeight * lineCount;
+
+        const horizontalScrollbarHeight = configuration.layoutInfo.horizontalScrollbarHeight;
+
+        const editorHeight = contentHeight + horizontalScrollbarHeight;
+        const defaultHeight = lineHeight * MIN_LINES + horizontalScrollbarHeight;
+        const height = Math.max(defaultHeight, editorHeight);
+        return height;
+      }
+
+      model.onDidChangeContent(() => {
+        const newLineCount = model.getLineCount();
+        if (newLineCount == lineCount) {
+          return;
+        }
+        lineCount = newLineCount;
+        const height = getHeight(lineCount);
+
+        Promise.resolve().then(() => {
+          container.style.height = `${height}px`;
+          editor.layout({
+            width: container.clientWidth,
+            height: height,
+          });
+        });
+      });
+
+      const height = getHeight(lineCount);
+      container.style.height = `${height}px`;
+      editor.layout();
+    })();
+</script>
+</body>
+</html>
